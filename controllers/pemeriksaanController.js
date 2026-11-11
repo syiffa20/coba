@@ -8,7 +8,7 @@ async function buatPemeriksaan(req, res) {
     statusPemeriksaan,
     dataHewan,
     dokter,
-  } = req.body;
+  } = req.body || {};
 
   const dataHewanYangDiterima = dataHewan && {
     jenisHewan: dataHewan.jenisHewan,
@@ -28,8 +28,37 @@ async function buatPemeriksaan(req, res) {
 }
 
 async function lihatSemuaPemeriksaan(req, res) {
-  const pemeriksaan = await Pemeriksaan.find();
+  const filter = {};
+  if (req.query.statusPemeriksaan !== undefined) {
+    if (typeof req.query.statusPemeriksaan !== 'string') {
+      const error = new Error('Filter status pemeriksaan tidak valid');
+      error.statusCode = 400;
+      throw error;
+    }
+    filter.statusPemeriksaan = req.query.statusPemeriksaan;
+  }
+
+  const pemeriksaan = await Pemeriksaan.find(filter)
+    .select('_id kodePemeriksaan namaHewan umurBulan statusPemeriksaan');
+
   res.status(200).json(pemeriksaan);
 }
 
-module.exports = { buatPemeriksaan, lihatSemuaPemeriksaan };
+async function lihatPemeriksaanBerdasarkanId(req, res) {
+  const pemeriksaan = await Pemeriksaan.findById(req.params.id)
+    .populate('dokter', 'kode nama');
+
+  if (!pemeriksaan) {
+    const error = new Error('Data pemeriksaan tidak ditemukan');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  res.status(200).json(pemeriksaan);
+}
+
+module.exports = {
+  buatPemeriksaan,
+  lihatSemuaPemeriksaan,
+  lihatPemeriksaanBerdasarkanId,
+};
